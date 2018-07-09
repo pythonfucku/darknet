@@ -1,5 +1,5 @@
-GPU=0
-CUDNN=0
+GPU=1
+CUDNN=1
 OPENCV=0
 OPENMP=0
 DEBUG=0
@@ -16,8 +16,10 @@ ARCH= -gencode arch=compute_30,code=sm_30 \
 VPATH=./src/:./examples
 SLIB=libdarknet.so
 ALIB=libdarknet.a
-EXEC=darknet
+EXEC=darknet_jason
 OBJDIR=./obj/
+
+LLIB=./include/libzlog.a
 
 CC=gcc
 NVCC=nvcc 
@@ -41,8 +43,12 @@ CFLAGS+=$(OPTS)
 ifeq ($(OPENCV), 1) 
 COMMON+= -DOPENCV
 CFLAGS+= -DOPENCV
-LDFLAGS+= `pkg-config --libs opencv` 
-COMMON+= `pkg-config --cflags opencv` 
+LDFLAGS+= -L/usr/local/lib -lopencv_core\
+	  -lopencv_highgui \
+	  -lopencv_videoio \
+	  -lopencv_imgcodecs
+#LDFLAGS+= `pkg-config --libs opencv` 
+#COMMON+= `pkg-config --cflags opencv` 
 endif
 
 ifeq ($(GPU), 1) 
@@ -73,7 +79,7 @@ all: obj backup results $(SLIB) $(ALIB) $(EXEC)
 
 
 $(EXEC): $(EXECOBJ) $(ALIB)
-	$(CC) $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(ALIB)
+	$(CC) $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(ALIB) $(LLIB)
 
 $(ALIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $^
