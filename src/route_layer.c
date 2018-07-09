@@ -9,7 +9,9 @@ route_layer make_route_layer(int batch, int n, int *input_layers, int *input_siz
 {
     //lrt
     //fprintf(stderr,"route ");
-    log_debug("%5d route ",index);
+    char buff[256];
+    int offset = 0;
+
     route_layer l = {0};
     l.type = ROUTE;
     l.batch = batch;
@@ -21,12 +23,13 @@ route_layer make_route_layer(int batch, int n, int *input_layers, int *input_siz
     for(i = 0; i < n; ++i){
         //lrt
         //fprintf(stderr," %d", input_layers[i]);
-        log_debug(" %d", input_layers[i]);
+        offset += sprintf(buff+offset," %d",input_layers[i]);
         outputs += input_sizes[i];
     }
     //lrt
     //fprintf(stderr, "\n");
-    log_debug("\n",index);
+    log_debug("%5d route %s\n", index, buff);
+
     l.outputs = outputs;
     l.inputs = outputs;
     l.delta =  calloc(outputs*batch, sizeof(float));
