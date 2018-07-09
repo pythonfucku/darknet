@@ -1,17 +1,35 @@
 #include "darknet.h"
+//lrt add
+#include "zlog.h"
+#include "time.h"
 
 static int coco_ids[] = {1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90};
 
+//lrt add
+void train_time(int time_start){
+    int sec,h,m,s,d;
+    sec = (int)(what_time_is_it_now() - time_start);
+    s = sec % 60;
+    m = sec / 60;
+    h = m / 60;
+    d = h / 24;
+    m = m - h * 60;
+    h = h - d * 24;
+    log_warn("[Training time: %5d day %2d:%2d:%2d ]\n",d, h, m, s);
+}
 
 void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)
 {
+    double time_start = what_time_is_it_now();//lrt add
+
     list *options = read_data_cfg(datacfg);
     char *train_images = option_find_str(options, "train", "data/train.list");
     char *backup_directory = option_find_str(options, "backup", "/backup/");
 
     srand(time(0));
     char *base = basecfg(cfgfile);
-    printf("%s\n", base);
+    //printf("%s\n", base);
+    log_info("%s\n", base);
     float avg_loss = -1;
     network **nets = calloc(ngpus, sizeof(network));
 
@@ -30,7 +48,9 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     network *net = nets[0];
 
     int imgs = net->batch * net->subdivisions * ngpus;
-    printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    //lrt update
+    //printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_info("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
     data train, buffer;
 
     layer l = net->layers[net->n - 1];
@@ -61,11 +81,12 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     //while(i*imgs < N*120){
     while(get_current_batch(net) < net->max_batches){
         if(l.random && count++%10 == 0){
-            printf("Resizing\n");
+            //printf("Resizing\n");
             int dim = (rand() % 10 + 10) * 32;
             if (get_current_batch(net)+200 > net->max_batches) dim = 608;
             //int dim = (rand() % 4 + 16) * 32;
-            printf("%d\n", dim);
+            log_warn("Resizing:%d\n", dim);//lrt add
+            train_time(time_start);
             args.w = dim;
             args.h = dim;
 
@@ -109,7 +130,9 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
            }
          */
 
-        printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
+        //lrt update
+        //printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
+        log_debug("Loaded: %lf seconds\n", what_time_is_it_now()-time);
 
         time=what_time_is_it_now();
         float loss = 0;
@@ -126,7 +149,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
         avg_loss = avg_loss*.9 + loss*.1;
 
         i = get_current_batch(net);
-        printf("%ld: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, i*imgs);
+        log_warn("[Training batch:%8ld]: %f, %f avg, %f rate, %lf seconds, %d images\n", i, loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, i*imgs);
         if(i%100==0){
 #ifdef GPU
             if(ngpus != 1) sync_nets(nets, ngpus, 0);
@@ -134,6 +157,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
             char buff[256];
             sprintf(buff, "%s/%s.backup", backup_directory, base);
             save_weights(net, buff);
+            train_time(time_start);
         }
         if(i%10000==0 || (i < 1000 && i%100 == 0)){
 #ifdef GPU
@@ -142,6 +166,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights", backup_directory, base, i);
             save_weights(net, buff);
+            train_time(time_start);
         }
         free_data(train);
     }
@@ -151,6 +176,8 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     char buff[256];
     sprintf(buff, "%s/%s_final.weights", backup_directory, base);
     save_weights(net, buff);
+    train_time(time_start);
+    log_warn("Running over\n");
 }
 
 
@@ -246,6 +273,7 @@ void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char
     network *net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 2);
     fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_error("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
     srand(time(0));
 
     list *plist = get_paths(valid_images);
@@ -312,6 +340,7 @@ void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char
     double start = what_time_is_it_now();
     for(i = nthreads; i < m+nthreads; i += nthreads){
         fprintf(stderr, "%d\n", i);
+        log_error("%d\n",i);
         for(t = 0; t < nthreads && i+t-nthreads < m; ++t){
             pthread_join(thr[t], 0);
             val[t] = buf[t];
@@ -358,6 +387,7 @@ void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char
         fclose(fp);
     }
     fprintf(stderr, "Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
+    log_error("Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
 }
 
 
@@ -376,6 +406,7 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
     network *net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
     fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_error("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
     srand(time(0));
 
     list *plist = get_paths(valid_images);
@@ -441,6 +472,7 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
     double start = what_time_is_it_now();
     for(i = nthreads; i < m+nthreads; i += nthreads){
         fprintf(stderr, "%d\n", i);
+        log_error("%d\n", i);
         for(t = 0; t < nthreads && i+t-nthreads < m; ++t){
             pthread_join(thr[t], 0);
             val[t] = buf[t];
@@ -484,6 +516,7 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
         fclose(fp);
     }
     fprintf(stderr, "Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
+    log_error("Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
 }
 
 void validate_detector_recall(char *cfgfile, char *weightfile)
@@ -491,6 +524,7 @@ void validate_detector_recall(char *cfgfile, char *weightfile)
     network *net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
     fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_error("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
     srand(time(0));
 
     list *plist = get_paths("data/coco_val_5k.list");
@@ -552,6 +586,7 @@ void validate_detector_recall(char *cfgfile, char *weightfile)
         }
 
         fprintf(stderr, "%5d %5d %5d\tRPs/Img: %.2f\tIOU: %.2f%%\tRecall:%.2f%%\n", i, correct, total, (float)proposals/(i+1), avg_iou*100/total, 100.*correct/total);
+        log_error("%5d %5d %5d\tRPs/Img: %.2f\tIOU: %.2f%%\tRecall:%.2f%%\n", i, correct, total, (float)proposals/(i+1), avg_iou*100/total, 100.*correct/total);
         free(id);
         free_image(orig);
         free_image(sized);
@@ -801,6 +836,7 @@ void run_detector(int argc, char **argv)
     int avg = find_int_arg(argc, argv, "-avg", 3);
     if(argc < 4){
         fprintf(stderr, "usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);
+        log_error("usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);
         return;
     }
     char *gpu_list = find_char_arg(argc, argv, "-gpus", 0);
@@ -809,7 +845,8 @@ void run_detector(int argc, char **argv)
     int gpu = 0;
     int ngpus = 0;
     if(gpu_list){
-        printf("%s\n", gpu_list);
+        //printf("%s\n", gpu_list);
+        log_info("%s\n", gpu_list);
         int len = strlen(gpu_list);
         ngpus = 1;
         int i;

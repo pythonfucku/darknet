@@ -1,8 +1,16 @@
+#include "zlog.h" //lrt add
 #include "darknet.h"
 
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+//lrt add
+#include <unistd.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <signal.h>
 
 extern void predict_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filename, int top);
 extern void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen);
@@ -400,11 +408,62 @@ void visualize(char *cfgfile, char *weightfile)
 #endif
 }
 
+//lrt add
+void background(int argc, char **argv){
+    int pid,rc;
+
+    if (0 == strcmp(argv[1], "detector")){
+        list *options = read_data_cfg(argv[3]);
+        char *cfg = option_find_str(options, "log", "log.conf");
+        rc = log_init(cfg);
+        if(rc){
+            printf("init log failed\n");
+            exit(-1);
+        }
+
+    } else {
+        rc = log_init(0);
+        if(rc){
+            printf("init log failed\n");
+            exit(-1);
+        }
+        return;
+    }
+
+    pid = fork();
+    if(pid == -1){
+        printf("Fork error!\n");
+        exit(1);
+    }
+    if(pid > 0){
+        //printf("Father Process exit!\n");
+        exit(0);
+    } 
+
+    if( setsid() == -1){
+        printf("Setsid error!\n");
+    }
+    
+    pid = fork();
+    if(pid == -1){
+        printf("Darknet Process ran error!\n");
+        exit(1);
+    }
+    if(pid > 0){
+        //printf("Darknet Process(pmid:[ %d ]) will running background\n",pid);
+        printf("Darknet Process(\x1b[91mpid:[ %d ]\x1b[0m) will running background\n",pid);
+        exit(0);
+    } 
+}
+
+
 int main(int argc, char **argv)
 {
     //test_resize("data/bad.jpg");
     //test_box();
     //test_convolutional_layer();
+    
+    background(argc, argv);//lrt add
     if(argc < 2){
         fprintf(stderr, "usage: %s <function>\n", argv[0]);
         return 0;
@@ -413,6 +472,19 @@ int main(int argc, char **argv)
     if(find_arg(argc, argv, "-nogpu")) {
         gpu_index = -1;
     }
+
+    //lrt add 
+    if (0 == strcmp(argv[1], "detector")){
+        if(0==strcmp(argv[2], "train")){
+            int i;
+            for(i=0; i<NOFILE; ++i){
+                close(i);
+            }
+            chdir("/tmp");
+            umask(0);
+        }
+    }
+
 
 #ifndef GPU
     gpu_index = -1;
@@ -437,7 +509,9 @@ int main(int argc, char **argv)
         char *filename = (argc > 4) ? argv[4]: 0;
         char *outfile = find_char_arg(argc, argv, "-out", 0);
         int fullscreen = find_arg(argc, argv, "-fullscreen");
-        test_detector("cfg/coco.data", argv[2], argv[3], filename, thresh, .5, outfile, fullscreen);
+        //lrt update
+        //test_detector("cfg/coco.data", argv[2], argv[3], filename, thresh, .5, outfile, fullscreen);
+        test_detector("cfg/voc.data", argv[2], argv[3], filename, thresh, .5, outfile, fullscreen);
     } else if (0 == strcmp(argv[1], "cifar")){
         run_cifar(argc, argv);
     } else if (0 == strcmp(argv[1], "go")){
@@ -501,6 +575,7 @@ int main(int argc, char **argv)
     } else {
         fprintf(stderr, "Not an option: %s\n", argv[1]);
     }
+    log_fini();
     return 0;
 }
 

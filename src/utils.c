@@ -10,6 +10,7 @@
 #include <sys/time.h>
 
 #include "utils.h"
+#include "zlog.h"
 
 
 /*
@@ -722,5 +723,21 @@ float **one_hot_encode(float *a, int n, int k)
         t[i][index] = 1;
     }
     return t;
+}
+
+//lrt add
+int log_init(char *logfile){
+    int rc;
+    rc = dzlog_init(logfile, "my_cat");
+    if(rc){
+        printf("init fialed(%d)\n",rc);
+        log_fini();
+        return -1;
+    }
+    return rc;
+}
+
+void log_fini(){
+    zlog_fini();
 }
 

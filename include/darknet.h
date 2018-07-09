@@ -1,9 +1,11 @@
 #ifndef DARKNET_API
+#include "zlog.h"
 #define DARKNET_API
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include "zlog.h"
 
 #define SECRET_NUM -1234
 extern int gpu_index;
@@ -582,6 +584,11 @@ typedef struct{
     float left, right, top, bottom;
 } box_label;
 
+//lrt add
+int log_init(char *logfile);
+void log_fini();
+
+
 
 network *load_network(char *cfg, char *weights, int clear);
 load_args get_base_args(network *net);
@@ -718,6 +725,13 @@ layer get_network_output_layer(network *net);
 void top_predictions(network *net, int n, int *index);
 void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
+
+//lrt add
+void float_to_image_lrt(int w, int h, int c, int step, unsigned char *data, image im);  //lrt
+float *image_to_float_lrt(image p);     //lrt
+void rgbgr_image(image im);     //lrt
+void free_float(float *data);   //lrt
+
 void ghost_image(image source, image dest, int dx, int dy);
 float network_accuracy(network *net, data d);
 void random_distort_image(image im, float hue, float saturation, float exposure);
