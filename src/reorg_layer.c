@@ -1,11 +1,12 @@
 #include "reorg_layer.h"
 #include "cuda.h"
 #include "blas.h"
+#include "zlog.h"
 
 #include <stdio.h>
 
 
-layer make_reorg_layer(int batch, int w, int h, int c, int stride, int reverse, int flatten, int extra)
+layer make_reorg_layer(int batch, int w, int h, int c, int stride, int reverse, int flatten, int extra,int index)
 {
     layer l = {0};
     l.type = REORG;
@@ -35,9 +36,13 @@ layer make_reorg_layer(int batch, int w, int h, int c, int stride, int reverse, 
     }
 
     if(extra){
-        fprintf(stderr, "reorg              %4d   ->  %4d\n",  l.inputs, l.outputs);
+        //lrt
+        //fprintf(stderr, "reorg              %4d   ->  %4d\n",  l.inputs, l.outputs);
+        log_debug("%5d reorg              %4d   ->  %4d\n",  index, l.inputs, l.outputs);
     } else {
-        fprintf(stderr, "reorg              /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n",  stride, w, h, c, l.out_w, l.out_h, l.out_c);
+        //lrt
+        //fprintf(stderr, "reorg              /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n",  stride, w, h, c, l.out_w, l.out_h, l.out_c);
+        log_debug("%5d reorg              /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n",  index, stride, w, h, c, l.out_w, l.out_h, l.out_c);
     }
     int output_size = l.outputs * batch;
     l.output =  calloc(output_size, sizeof(float));

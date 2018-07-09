@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include "zlog.h"
 
 #include "activation_layer.h"
 #include "logistic_layer.h"
@@ -197,7 +198,7 @@ convolutional_layer parse_convolutional(list *options, size_params params)
     int binary = option_find_int_quiet(options, "binary", 0);
     int xnor = option_find_int_quiet(options, "xnor", 0);
 
-    convolutional_layer layer = make_convolutional_layer(batch,h,w,c,n,groups,size,stride,padding,activation, batch_normalize, binary, xnor, params.net->adam);
+    convolutional_layer layer = make_convolutional_layer(batch,h,w,c,n,groups,size,stride,padding,activation, batch_normalize, binary, xnor, params.net->adam, params.index);//lrt
     layer.flipped = option_find_int_quiet(options, "flipped", 0);
     layer.dot = option_find_float_quiet(options, "dot", 0);
 
@@ -308,7 +309,7 @@ layer parse_yolo(list *options, size_params params)
 
     char *a = option_find_str(options, "mask", 0);
     int *mask = parse_yolo_mask(a, &num);
-    layer l = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes);
+    layer l = make_yolo_layer(params.batch, params.w, params.h, num, total, mask, classes,params.index);
     assert(l.outputs == params.inputs);
 
     l.max_boxes = option_find_int_quiet(options, "max",90);
@@ -464,7 +465,7 @@ layer parse_reorg(list *options, size_params params)
     batch=params.batch;
     if(!(h && w && c)) error("Layer before reorg layer must output image.");
 
-    layer layer = make_reorg_layer(batch,w,h,c,stride,reverse, flatten, extra);
+    layer layer = make_reorg_layer(batch,w,h,c,stride,reverse, flatten, extra, params.index);//lrt
     return layer;
 }
 
@@ -481,7 +482,7 @@ maxpool_layer parse_maxpool(list *options, size_params params)
     batch=params.batch;
     if(!(h && w && c)) error("Layer before maxpool layer must output image.");
 
-    maxpool_layer layer = make_maxpool_layer(batch,h,w,c,size,stride,padding);
+    maxpool_layer layer = make_maxpool_layer(batch,h,w,c,size,stride,padding, params.index);//lrt
     return layer;
 }
 
@@ -533,7 +534,7 @@ layer parse_shortcut(list *options, size_params params, network *net)
     int batch = params.batch;
     layer from = net->layers[index];
 
-    layer s = make_shortcut_layer(batch, index, params.w, params.h, params.c, from.out_w, from.out_h, from.out_c);
+    layer s = make_shortcut_layer(batch, index, params.w, params.h, params.c, from.out_w, from.out_h, from.out_c,params.index);//lrt
 
     char *activation_s = option_find_str(options, "activation", "linear");
     ACTIVATION activation = get_activation(activation_s);
@@ -581,7 +582,7 @@ layer parse_upsample(list *options, size_params params, network *net)
 {
 
     int stride = option_find_int(options, "stride",2);
-    layer l = make_upsample_layer(params.batch, params.w, params.h, params.c, stride);
+    layer l = make_upsample_layer(params.batch, params.w, params.h, params.c, stride,params.index);//lrt
     l.scale = option_find_float_quiet(options, "scale", 1);
     return l;
 }
@@ -608,7 +609,7 @@ route_layer parse_route(list *options, size_params params, network *net)
     }
     int batch = params.batch;
 
-    route_layer layer = make_route_layer(batch, n, layers, sizes);
+    route_layer layer = make_route_layer(batch, n, layers, sizes, params.index);
 
     convolutional_layer first = net->layers[layers[0]];
     layer.out_w = first.out_w;
@@ -753,7 +754,9 @@ network *parse_network_cfg(char *filename)
     n = n->next;
     int count = 0;
     free_section(s);
-    fprintf(stderr, "layer     filters    size              input                output\n");
+    //lrt
+    //fprintf(stderr, "layer     filters    size              input                output\n");
+    log_debug("layer     filters    size              input                output\n");
     while(n){
         params.index = count;
         fprintf(stderr, "%5d ", count);
@@ -821,7 +824,9 @@ network *parse_network_cfg(char *filename)
             l.delta_gpu = net->layers[count-1].delta_gpu;
 #endif
         }else{
-            fprintf(stderr, "Type not recognized: %s\n", s->type);
+            //lrt
+            //fprintf(stderr, "Type not recognized: %s\n", s->type);
+            log_debug("Type not recognized: %s\n", s->type);
         }
         l.clip = net->clip;
         l.truth = option_find_int_quiet(options, "truth", 0);
@@ -996,7 +1001,9 @@ void save_weights_upto(network *net, char *filename, int cutoff)
         cuda_set_device(net->gpu_index);
     }
 #endif
-    fprintf(stderr, "Saving weights to %s\n", filename);
+    //lrt
+    //fprintf(stderr, "Saving weights to %s\n", filename);
+    log_info("Saving weights to %s\n", filename);
     FILE *fp = fopen(filename, "wb");
     if(!fp) file_error(filename);
 
@@ -1206,7 +1213,9 @@ void load_weights_upto(network *net, char *filename, int start, int cutoff)
         cuda_set_device(net->gpu_index);
     }
 #endif
-    fprintf(stderr, "Loading weights from %s...", filename);
+    //lrt
+    //fprintf(stderr, "Loading weights from %s...", filename);
+    log_info("Loading weights from %s...", filename);
     fflush(stdout);
     FILE *fp = fopen(filename, "rb");
     if(!fp) file_error(filename);
@@ -1285,7 +1294,9 @@ void load_weights_upto(network *net, char *filename, int start, int cutoff)
 #endif
         }
     }
-    fprintf(stderr, "Done!\n");
+    //lrt
+    //fprintf(stderr, "Done!\n");
+    log_info("Done!\n");
     fclose(fp);
 }
 

@@ -4,6 +4,7 @@
 #include "box.h"
 #include "cuda.h"
 #include "utils.h"
+#include "zlog.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -47,7 +48,9 @@ layer make_region_layer(int batch, int w, int h, int n, int classes, int coords)
     l.delta_gpu = cuda_make_array(l.delta, batch*l.outputs);
 #endif
 
-    fprintf(stderr, "detection\n");
+    //lrt
+    //fprintf(stderr, "detection\n");
+    log_debug("detection\n");
     srand(0);
 
     return l;
@@ -317,7 +320,9 @@ void forward_region_layer(const layer l, network net)
         }
     }
     *(l.cost) = pow(mag_array(l.delta, l.outputs * l.batch), 2);
-    printf("Region Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, Avg Recall: %f,  count: %d\n", avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, count);
+    //lrt
+    //printf("Region Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, Avg Recall: %f,  count: %d\n", avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, count);
+    log_info("Region Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, Avg Recall: %f,  count: %d\n", avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, count);
 }
 
 void backward_region_layer(const layer l, network net)

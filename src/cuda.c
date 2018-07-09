@@ -32,7 +32,9 @@ void check_error(cudaError_t status)
     {   
         const char *s = cudaGetErrorString(status);
         char buffer[256];
-        printf("CUDA Error: %s\n", s);
+        //lrt
+        //printf("CUDA Error: %s\n", s);
+        log_error("CUDA Error: %s\n", s);
         assert(0);
         snprintf(buffer, 256, "CUDA Error: %s", s);
         error(buffer);

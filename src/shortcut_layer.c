@@ -2,13 +2,16 @@
 #include "cuda.h"
 #include "blas.h"
 #include "activations.h"
+#include "zlog.h"
 
 #include <stdio.h>
 #include <assert.h>
 
-layer make_shortcut_layer(int batch, int index, int w, int h, int c, int w2, int h2, int c2)
+layer make_shortcut_layer(int batch, int index, int w, int h, int c, int w2, int h2, int c2, int total_index)
 {
-    fprintf(stderr, "res  %3d                %4d x%4d x%4d   ->  %4d x%4d x%4d\n",index, w2,h2,c2, w,h,c);
+    //lrt
+    //fprintf(stderr, "res  %3d                %4d x%4d x%4d   ->  %4d x%4d x%4d\n",index, w2,h2,c2, w,h,c);
+    log_debug("%5d res  %3d                %4d x%4d x%4d   ->  %4d x%4d x%4d\n",total_index,index, w2,h2,c2, w,h,c);
     layer l = {0};
     l.type = SHORTCUT;
     l.batch = batch;

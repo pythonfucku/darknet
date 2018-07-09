@@ -1,10 +1,11 @@
 #include "upsample_layer.h"
 #include "cuda.h"
 #include "blas.h"
+#include "zlog.h"
 
 #include <stdio.h>
 
-layer make_upsample_layer(int batch, int w, int h, int c, int stride)
+layer make_upsample_layer(int batch, int w, int h, int c, int stride,int index)
 {
     layer l = {0};
     l.type = UPSAMPLE;
@@ -36,8 +37,16 @@ layer make_upsample_layer(int batch, int w, int h, int c, int stride)
     l.delta_gpu =  cuda_make_array(l.delta, l.outputs*batch);
     l.output_gpu = cuda_make_array(l.output, l.outputs*batch);
     #endif
-    if(l.reverse) fprintf(stderr, "downsample         %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", stride, w, h, c, l.out_w, l.out_h, l.out_c);
-    else fprintf(stderr, "upsample           %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", stride, w, h, c, l.out_w, l.out_h, l.out_c);
+    if(l.reverse) {
+        //lrt
+        //fprintf(stderr, "downsample         %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", stride, w, h, c, l.out_w, l.out_h, l.out_c);
+        log_debug("%5d downsample         %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", index, stride, w, h, c, l.out_w, l.out_h, l.out_c);
+    }
+    else {
+        //lrt
+        //fprintf(stderr, "upsample           %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", stride, w, h, c, l.out_w, l.out_h, l.out_c);
+        log_debug("%5d upsample           %2dx  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", index, stride, w, h, c, l.out_w, l.out_h, l.out_c);
+    }
     return l;
 }
 

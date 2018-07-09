@@ -1,6 +1,7 @@
 #include "maxpool_layer.h"
 #include "cuda.h"
 #include <stdio.h>
+#include "zlog.h"//lrt
 
 image get_maxpool_image(maxpool_layer l)
 {
@@ -18,7 +19,7 @@ image get_maxpool_delta(maxpool_layer l)
     return float_to_image(w,h,c,l.delta);
 }
 
-maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding)
+maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int stride, int padding, int index)
 {
     maxpool_layer l = {0};
     l.type = MAXPOOL;
@@ -47,7 +48,9 @@ maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int s
     l.output_gpu  = cuda_make_array(l.output, output_size);
     l.delta_gpu   = cuda_make_array(l.delta, output_size);
     #endif
-    fprintf(stderr, "max          %d x %d / %d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", size, size, stride, w, h, c, l.out_w, l.out_h, l.out_c);
+    //lrt
+    //fprintf(stderr, "max          %d x %d / %d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", size, size, stride, w, h, c, l.out_w, l.out_h, l.out_c);
+    log_debug("%5d max          %d x %d / %d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n", index, size, size, stride, w, h, c, l.out_w, l.out_h, l.out_c);
     return l;
 }
 

@@ -1,12 +1,15 @@
 #include "route_layer.h"
 #include "cuda.h"
 #include "blas.h"
+#include "zlog.h"
 
 #include <stdio.h>
 
-route_layer make_route_layer(int batch, int n, int *input_layers, int *input_sizes)
+route_layer make_route_layer(int batch, int n, int *input_layers, int *input_sizes, int index)
 {
-    fprintf(stderr,"route ");
+    //lrt
+    //fprintf(stderr,"route ");
+    log_debug("%5d route ",index);
     route_layer l = {0};
     l.type = ROUTE;
     l.batch = batch;
@@ -16,10 +19,14 @@ route_layer make_route_layer(int batch, int n, int *input_layers, int *input_siz
     int i;
     int outputs = 0;
     for(i = 0; i < n; ++i){
-        fprintf(stderr," %d", input_layers[i]);
+        //lrt
+        //fprintf(stderr," %d", input_layers[i]);
+        log_debug(" %d", input_layers[i]);
         outputs += input_sizes[i];
     }
-    fprintf(stderr, "\n");
+    //lrt
+    //fprintf(stderr, "\n");
+    log_debug("\n",index);
     l.outputs = outputs;
     l.inputs = outputs;
     l.delta =  calloc(outputs*batch, sizeof(float));

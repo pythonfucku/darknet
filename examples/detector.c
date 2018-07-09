@@ -15,7 +15,7 @@ void train_time(int time_start){
     d = h / 24;
     m = m - h * 60;
     h = h - d * 24;
-    log_warn("[Training time: %5d day %2d:%2d:%2d ]\n",d, h, m, s);
+    log_warn("[Training  time: %5d day %2d:%2d:%2d ]\n",d, h, m, s);
 }
 
 void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)
@@ -85,7 +85,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
             int dim = (rand() % 10 + 10) * 32;
             if (get_current_batch(net)+200 > net->max_batches) dim = 608;
             //int dim = (rand() % 4 + 16) * 32;
-            log_warn("Resizing:%d\n", dim);//lrt add
+            log_warn("Resizing:%d    ", dim);//lrt add
             train_time(time_start);
             args.w = dim;
             args.h = dim;
@@ -846,7 +846,7 @@ void run_detector(int argc, char **argv)
     int ngpus = 0;
     if(gpu_list){
         //printf("%s\n", gpu_list);
-        log_info("%s\n", gpu_list);
+        log_debug("%s\n", gpu_list);
         int len = strlen(gpu_list);
         ngpus = 1;
         int i;
@@ -876,7 +876,13 @@ void run_detector(int argc, char **argv)
     char *weights = (argc > 5) ? argv[5] : 0;
     char *filename = (argc > 6) ? argv[6]: 0;
     if(0==strcmp(argv[2], "test")) test_detector(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen);
-    else if(0==strcmp(argv[2], "train")) train_detector(datacfg, cfg, weights, gpus, ngpus, clear);
+    else if(0==strcmp(argv[2], "train")){
+        //lrt add
+        list *options = read_data_cfg(datacfg);
+        cfg = option_find_str(options, "network", "cfg/yolov3-voc.cfg");
+        weights = option_find_str(options, "weight", "weight_CONST/darknet53.conv.74");
+        train_detector(datacfg, cfg, weights, gpus, ngpus, clear);
+    }
     else if(0==strcmp(argv[2], "valid")) validate_detector(datacfg, cfg, weights, outfile);
     else if(0==strcmp(argv[2], "valid2")) validate_detector_flip(datacfg, cfg, weights, outfile);
     else if(0==strcmp(argv[2], "recall")) validate_detector_recall(cfg, weights);
@@ -889,4 +895,7 @@ void run_detector(int argc, char **argv)
     }
     //else if(0==strcmp(argv[2], "extract")) extract_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
     //else if(0==strcmp(argv[2], "censor")) censor_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
+    else{
+        log_error("arg error!\n");
+    }
 }
