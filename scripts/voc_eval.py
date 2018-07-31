@@ -7,7 +7,7 @@
 # --------------------------------------------------------
 
 import xml.etree.ElementTree as ET
-import os
+import os,sys
 import cPickle
 import numpy as np
 
@@ -107,8 +107,10 @@ def voc_eval(detpath,
         for i, imagename in enumerate(imagenames):
             recs[imagename] = parse_rec(annopath.format(imagename))
             if i % 100 == 0:
-                print 'Reading annotation for {:d}/{:d}'.format(
-                    i + 1, len(imagenames))
+                #print 'Reading annotation for {:d}/{:d}'.format(
+                    #i + 1, len(imagenames))
+                sys.stdout.write('Reading annotation for: {0}/{1}\r'.format(i + 1, len(imagenames)))
+                sys.stdout.flush()
         # save
         print 'Saving cached annotations to {:s}'.format(cachefile)
         with open(cachefile, 'w') as f:

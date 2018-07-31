@@ -22,13 +22,14 @@ def parse_args():
     Parse input arguments
     """
     parser = argparse.ArgumentParser(description='Re-evaluate results')
-    parser.add_argument('output_dir', nargs=1, help='results directory',
+    parser.add_argument('--output_dir', nargs=1, default='./result', help='results directory',
                         type=str)
-    parser.add_argument('--voc_dir', dest='voc_dir', default='data/VOCdevkit', type=str)
+    parser.add_argument('voc_dir',  default='../data/VOCdevkit',
+            help='VOCdevkit directory')
     parser.add_argument('--year', dest='year', default='2017', type=str)
     parser.add_argument('--image_set', dest='image_set', default='test', type=str)
 
-    parser.add_argument('--classes', dest='class_file', default='data/voc.names', type=str)
+    ##parser.add_argument('--classes', dest='class_file', default='data/voc.names', type=str)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -45,21 +46,14 @@ def get_voc_results_file_template(image_set, out_dir = 'results'):
 def do_python_eval(devkit_path, year, image_set, classes, output_dir = 'results'):
     annopath = os.path.join(
         devkit_path,
-        'VOC' + year,
-        #'sq',
         'Annotations',
         '{:s}.xml')
-    #annopath = '/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq/Annotations/{:s}.xml'
-    annopath = '/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq-DGX/Annotations/{:s}.xml'
     imagesetfile = os.path.join(
         devkit_path,
-        'VOC' + year,
-        #'sq',
         'ImageSets',
         'Main',
-        image_set + '.txt')
-    #imagesetfile = '/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq/ImageSets/Main/train.txt'
-    imagesetfile = '/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq-DGX/ImageSets/Main/train.txt'
+        'train.txt')
+
     cachedir = os.path.join(devkit_path, 'annotations_cache')
     aps = []
     # The PASCAL VOC metric changed in 2010
@@ -98,7 +92,8 @@ if __name__ == '__main__':
     args = parse_args()
 
     output_dir = os.path.abspath(args.output_dir[0])
-    with open(args.class_file, 'r') as f:
+    class_file = os.path.join(args.voc_dir,"cfg","voc.names")
+    with open(class_file, 'r') as f:
         lines = f.readlines()
 
     classes = [t.strip('\n') for t in lines]
