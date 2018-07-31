@@ -230,8 +230,9 @@ void print_detector_detections(FILE **fps, char *id, detection *dets, int total,
         if (ymax > h) ymax = h;
 
         for(j = 0; j < classes; ++j){
-            if (dets[i].prob[j]) fprintf(fps[j], "%s %f %f %f %f %f\n", id, dets[i].prob[j],
-                    xmin, ymin, xmax, ymax);
+            if (dets[i].prob[j]) 
+                fprintf(fps[j], "%s %f %f %f %f %f\n", id, dets[i].prob[j],xmin, ymin, xmax, ymax);
+                //log_info("%s %f %f %f %f %f\n", id, dets[i].prob[j],xmin, ymin, xmax, ymax);
         }
     }
 }
@@ -306,6 +307,7 @@ void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char
         for(j = 0; j < classes; ++j){
             snprintf(buff, 1024, "%s/%s%s.txt", prefix, outfile, names[j]);
             fps[j] = fopen(buff, "w");
+            log_debug("%s\n",buff);
         }
     }
 
@@ -405,8 +407,12 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
 
     network *net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
-    fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
-    log_error("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    //liangrentao
+    //fprintf(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_info(stderr, "Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_info("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
+    log_info("liangrentao test cfgfile:%s\n",cfgfile);
+    log_info("liangrentao test weightfile:%s\n",weightfile);
     srand(time(0));
 
     list *plist = get_paths(valid_images);
@@ -439,8 +445,10 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
         for(j = 0; j < classes; ++j){
             snprintf(buff, 1024, "%s/%s%s.txt", prefix, outfile, names[j]);
             fps[j] = fopen(buff, "w");
+            log_debug("%s\n",buff);
         }
     }
+    log_debug("liangrentao test classes:%d\n",classes);
 
 
     int m = plist->size;
@@ -471,8 +479,9 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
     }
     double start = what_time_is_it_now();
     for(i = nthreads; i < m+nthreads; i += nthreads){
-        fprintf(stderr, "%d\n", i);
-        log_error("%d\n", i);
+        //liangrentao
+        //fprintf(stderr, "%d\n", i);
+        log_info("%d\n", i);
         for(t = 0; t < nthreads && i+t-nthreads < m; ++t){
             pthread_join(thr[t], 0);
             val[t] = buf[t];
@@ -516,7 +525,7 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
         fclose(fp);
     }
     fprintf(stderr, "Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
-    log_error("Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
+    log_info("Total Detection Time: %f Seconds\n", what_time_is_it_now() - start);
 }
 
 void validate_detector_recall(char *cfgfile, char *weightfile)
@@ -883,7 +892,13 @@ void run_detector(int argc, char **argv)
         weights = option_find_str(options, "weight", "weight_CONST/darknet53.conv.74");
         train_detector(datacfg, cfg, weights, gpus, ngpus, clear);
     }
-    else if(0==strcmp(argv[2], "valid")) validate_detector(datacfg, cfg, weights, outfile);
+    else if(0==strcmp(argv[2], "valid")){
+        //lrt add
+        list *options = read_data_cfg(datacfg);
+        cfg = option_find_str(options, "network", "cfg/yolov3-voc.cfg");
+        weights = option_find_str(options, "weight", "weight_CONST/darknet53.conv.74");
+        validate_detector(datacfg, cfg, weights, outfile);
+    }
     else if(0==strcmp(argv[2], "valid2")) validate_detector_flip(datacfg, cfg, weights, outfile);
     else if(0==strcmp(argv[2], "recall")) validate_detector_recall(cfg, weights);
     else if(0==strcmp(argv[2], "demo")) {
