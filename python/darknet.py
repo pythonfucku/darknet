@@ -142,8 +142,8 @@ class darknet():
         self.float_to_image_lrt.argtrypes = [c_int,c_int,c_int,c_int,POINTER(c_char_p),POINTER(IMAGE)]
 
         self.image_to_float_lrt = self.lib.image_to_float_lrt
-        self.image_to_float_lrt.argtypes = [IMAGE]
-        self.image_to_float_lrt.restype = POINTER(c_float)
+        self.image_to_float_lrt.argtypes = [IMAGE,POINTER(c_char_p)]
+        #self.image_to_float_lrt.restype = POINTER(c_float)
 
         self.load_alphabet = self.lib.load_alphabet
         self.load_alphabet.restype = POINTER(POINTER(IMAGE))
@@ -171,6 +171,7 @@ class darknet():
                 t1 = t
                 weightfile = f
 
+        #weightfile = '/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq-DGX/3/weights/yolov3-voc21-v2_final.weights'
         tmp_cfg_name = os.path.split(data_options["network"])
         detect_cfg_file = os.path.join(tmp_cfg_name[0], "detect-{0}".format(tmp_cfg_name[1]))
         if not os.path.exists(detect_cfg_file):
@@ -262,8 +263,8 @@ class darknet():
         step = cv_image.dtype.itemsize * c * w
 
         img_data = cv_image.ravel()
-        if not img_data.flags['C_CONTIGUOUS']:
-            img_data = np.ascontiguous(img_data, dtype=img_data.dtype)
+        #if not img_data.flags['C_CONTIGUOUS']:
+            #img_data = np.ascontiguous(img_data, dtype=img_data.dtype)
         img_data_ctypes_ptr = img_data.ctypes.data_as(POINTER(c_char_p))
 
         im = self.make_image(w, h, c)
@@ -271,14 +272,10 @@ class darknet():
         self.rgbgr_image(im)
 
         res = self.detect(im,thresh=.5, hier_thresh=.5, nms=.45,use_alphabet=0)
-
-        aaa = self.image_to_float_lrt(im)
-        detect_image = np.ctypeslib.as_array(aaa,(im.h, im.w, im.c))
-        detect_image = detect_image.astype(np.uint8)
-        self.free_float(aaa)
+        self.image_to_float_lrt(im, img_data_ctypes_ptr)
         self.free_image(im)
 
-        return detect_image,res
+        return res, cv_image
 
 
     def run(self,imgfile, imgpath):

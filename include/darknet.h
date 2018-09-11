@@ -727,8 +727,8 @@ void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
 
 //lrt add
-void float_to_image_lrt(int w, int h, int c, int step, unsigned char *data, image im);  //lrt
-float *image_to_float_lrt(image p);     //lrt
+void float_to_image_lrt(int step, unsigned char *data, image im);  //lrt
+void image_to_float_lrt(image p, unsigned char *output_data);     //lrt
 void rgbgr_image(image im);     //lrt
 void free_float(float *data);   //lrt
 

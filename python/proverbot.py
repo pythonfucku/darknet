@@ -1,4 +1,4 @@
-from darknet import *
+from darknet_0 import *
 
 def predict_tactic(net, s):
     prob = 0
@@ -32,6 +32,7 @@ def predict_tactics(net, s, n):
     tacs = sorted(tacs, key=lambda x: -x[1])
     return tacs
 
-net = load_net("cfg/coq.test.cfg", "/home/pjreddie/backup/coq.backup", 0)
-t = predict_tactics(net, "+++++\n", 10)
+#net = load_net("cfg/coq.test.cfg", "/home/pjreddie/backup/coq.backup", 0)
+net =load_net("/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq/cfg/yolov3-voc.cfg","/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq/weights/yolov3-voc_final.weights", 0)
+t = predict_tactics(net, "+++++\n", 1)
 print t

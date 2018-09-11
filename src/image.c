@@ -806,37 +806,35 @@ void free_float(float *data)
 {
     free(data);
 }
-void float_to_image_lrt(int w, int h, int c, int step, unsigned char *data, image im)
+void float_to_image_lrt(int step, unsigned char *data, image im)
 {
     int i, j, k;
 
-    for(i = 0; i < h; ++i){
-        for(k= 0; k < c; ++k){
-            for(j = 0; j < w; ++j){
-                im.data[k*w*h + i*w + j] = data[i*step + j*c + k]/255.;
+    for(i = 0; i < im.h; ++i){
+        for(k= 0; k < im.c; ++k){
+            for(j = 0; j < im.w; ++j){
+                im.data[k*im.w*im.h + i*im.w + j] = data[i*step + j*im.c + k]/255.;
 
             }
         }
     }
 }
-float *image_to_float_lrt(image p)
+void image_to_float_lrt(image p,unsigned char *output_data)
 {
     int y;
     int x;
     int k;
     int step = (((p.w * p.c * (8 & ~0x80000000) + 7)/8)+ 4 - 1) & (~(4 - 1));
     //int step = (((p.w * p.c * (IPL_DEPTH_8U & ~IPL_DEPTH_SIGN) + 7)/8)+ 4 - 1) & (~(4 - 1));
-    float *data = calloc(p.h*p.w*p.c,sizeof(float));
 
     if(p.c == 3) rgbgr_image(p);
     for(y = 0; y < p.h; ++y){
         for(x = 0; x < p.w; ++x){
             for(k= 0; k < p.c; ++k){
-                data[y*step + x*p.c + k] = (unsigned char)(get_pixel(p,x,y,k)*255);
+                output_data[y*step + x*p.c + k] = (unsigned char)(get_pixel(p,x,y,k)*255);
             }
         }
     }
-    return data;
 }
 
 

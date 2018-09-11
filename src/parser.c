@@ -759,7 +759,7 @@ network *parse_network_cfg(char *filename)
     log_debug("layer     filters    size              input                output\n");
     while(n){
         params.index = count;
-        fprintf(stderr, "%5d ", count);
+        //fprintf(stderr, "%5d ", count);
         s = (section *)n->val;
         options = s->options;
         layer l = {0};
@@ -1215,7 +1215,7 @@ void load_weights_upto(network *net, char *filename, int start, int cutoff)
 #endif
     //lrt
     //fprintf(stderr, "Loading weights from %s...", filename);
-    log_info("Loading weights from %s...", filename);
+    log_info("Loading weights from %s...\n", filename);
     fflush(stdout);
     FILE *fp = fopen(filename, "rb");
     if(!fp) file_error(filename);
