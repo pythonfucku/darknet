@@ -8,11 +8,19 @@ import cv2
 import numpy as np
 import io
 from PIL import Image
+import time
 
-#local
-import process_logging
 logger = logging.getLogger(__name__)
 
+def array_to_image(arr):
+    arr = arr.transpose(2,0,1)
+    c = arr.shape[0]
+    h = arr.shape[1]
+    w = arr.shape[2]
+    arr = (arr/255.0).flatten()
+    data = c_array(c_float, arr)
+    im = IMAGE(w,h,c,data)
+    return im
 
 def sample(probs):
     s = sum(probs)
@@ -56,8 +64,8 @@ class METADATA(Structure):
 
     
 class darknet():
-    def __init__(self, vocData):
-        self.lib = CDLL("../libdarknet.so", RTLD_GLOBAL)
+    def __init__(self, vocData, soFile='../libdarknet.so', input_width=None, input_height=None, input_channel=None):
+        self.lib = CDLL(soFile, RTLD_GLOBAL)
 
         self.lib.network_width.argtypes = [c_void_p]
         self.lib.network_width.restype = c_int
@@ -156,9 +164,8 @@ class darknet():
         data_options = self.read_data_cfg(vocData)
         self.lib.log_init(data_options["detect_log"])
 
+        #-------------------------------------------
         #in your project the log file change yourself
-        logger.info("test")
-
         weights = os.listdir(data_options["backup"])
         t1 = 0
         weightfile = None
@@ -171,7 +178,6 @@ class darknet():
                 t1 = t
                 weightfile = f
 
-        #weightfile = '/home/crow/workspace/BBA/aiDATA/a_image_VOC_factory/VOCdevkit/sq-DGX/3/weights/yolov3-voc21-v2_final.weights'
         tmp_cfg_name = os.path.split(data_options["network"])
         detect_cfg_file = os.path.join(tmp_cfg_name[0], "detect-{0}".format(tmp_cfg_name[1]))
         if not os.path.exists(detect_cfg_file):
@@ -197,6 +203,10 @@ class darknet():
         self.net = self.load_net(detect_cfg_file, weightfile, 0)
         self.meta = self.load_meta(vocData)
 
+        self.input_height = input_height
+        self.input_width = input_width
+        self.input_channel = input_channel
+        self.dtype_itemsize = 1
         #lrt end
 
 
@@ -232,7 +242,7 @@ class darknet():
         pnum = pointer(num)
 
         self.predict_image(self.net, im)
-        dets = self.get_network_boxes(self.net, im.w, im.h, thresh, hier_thresh, None, 1, pnum)
+        dets = self.get_network_boxes(self.net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
         num = pnum[0]
         if (nms): self.do_nms_obj(dets, num, self.meta.classes, nms);
 
@@ -259,60 +269,82 @@ class darknet():
         return res
 
     def camera(self,cv_image):
-        h, w, c= cv_image.shape
-        step = cv_image.dtype.itemsize * c * w
+        t1 = time.time()
+        if self.input_width is None or self.input_height is None:
+            self.input_height, self.input_width, self.input_channel = cv_image.shape
+            self.step = self.dtype_itemsize * self.input_channel * self.input_width
 
-        img_data = cv_image.ravel()
-        #if not img_data.flags['C_CONTIGUOUS']:
-            #img_data = np.ascontiguous(img_data, dtype=img_data.dtype)
-        img_data_ctypes_ptr = img_data.ctypes.data_as(POINTER(c_char_p))
-
-        im = self.make_image(w, h, c)
-        self.float_to_image_lrt(w,h,c,step,img_data_ctypes_ptr,im)
+        img_data_ctypes_ptr = cv_image.ravel().ctypes.data_as(POINTER(c_char_p))
+        im = self.make_image(self.input_width, self.input_height, self.input_channel)
+        self.float_to_image_lrt(self.step, img_data_ctypes_ptr, im)
         self.rgbgr_image(im)
 
         res = self.detect(im,thresh=.5, hier_thresh=.5, nms=.45,use_alphabet=0)
         self.image_to_float_lrt(im, img_data_ctypes_ptr)
         self.free_image(im)
 
+        print 'DARKNET CAMERA Use time:{}'.format(time.time() - t1)
         return res, cv_image
 
 
-    def run(self,imgfile, imgpath):
-        if imgfile:
-            im = self.load_image(imgfile, 0, 0)
+    def run(self,toDetect,args):
+        t1 = time.time()
+        if args.i:
+            im = self.load_image(toDetect, 0, 0)
             r = self.detect(im)
-            for a in r:
-                print a
-            output = os.path.basename(imgfile)
-            self.save_image(im,imgfile.replace(output,"detect_{0}".format(output)))
+            output = os.path.basename(toDetect)
+            self.save_image(im, toDetect.replace(output,"detect_{0}".format(output)))
             self.free_image(im)
+            print 'DARKNET Use time:{}'.format(time.time() - t1)
+            print 'RESULT:{}'.format(r)
 
-        if imgpath:
-            filelist = os.listdir(imgpath)
+        if args.p:
+            filelist = os.listdir(toDetect)
             for file in filelist:
                 if file.lower().endswith('.jpg'):
-                    imgfile = os.path.join(imgpath,file)
+                    imgfile = os.path.join(toDetect,file)
+                    output = os.path.basename(imgfile)
                     im = self.load_image(imgfile, 0, 0)
                     r = self.detect(im)
+                    self.save_image(im,imgfile.replace(output,"detect_{0}".format(output)))
                     self.free_image(im)
-                    #print r
+                    print 'RESULT:{}'.format(r)
+        if args.e:
+            image = cv2.imread(toDetect)
+            im = array_to_image(image)
+            res = self.detect(im)
+            for output in res:
+                box = output[-1]
+                top, left, bottom, right = box
+                w = int(bottom)
+                h = int(right)
+                x = int(top) - w / 2
+                y = int(left) - h / 2
+                cv2.rectangle(image, (x,y), (x+w,y+h), (255,0,0), 1)
+                #cv2.putText(image, predicted_class, text_origin, self.font_face, self.font_scale, self.font_color, self.font_thickness)
+            print 'NEW TEST Use time:{}'.format(time.time() - t1)
+            print 'RESULT:{}'.format(res)
+
+        if args.c:
+            image = cv2.imread(toDetect)
+            self.camera(image)
+
+
 
     
 if __name__ == "__main__":
+    import process_logging
     process_logging.initLogging("/tmp/test_detect.log")
     parser = argparse.ArgumentParser()
     parser.add_argument('vocData',help=('The voc.data of this model trained'))
-    parser.add_argument('-i',help=('To detect image file'))
-    parser.add_argument('-p',help=('To detect image path'))
-    parser.add_argument('-d',action='store_true',default=False,help=('The debug model will show image'))
-    parser.add_argument('-f',action='store_true',default=False,help=('Detect the image path forever'))
-    parser.add_argument('-c',action='store_true',default=False,help=('camera'))
+    parser.add_argument('toDetectImage',help=('To be detect Image file'))
+    parser.add_argument('-i', action='store_true', default=False, help=('To detect image file with darknet pointer'))
+    parser.add_argument('-p', action='store_true', default=False, help=('To detect image path with darknet pointer'))
+    parser.add_argument('-c', action='store_true', default=False, help=('To detect image file with cv2 and darknet pointer'))
+    parser.add_argument('-e', action='store_true', default=False, help=('To detect image file with cv2 easy change'))
     args = parser.parse_args()
 
     d = darknet(args.vocData)
-    d.run(args.i,args.p)
+    d.run(args.toDetectImage,args)
     logger.info("test over")
-    import datetime
-    print datetime.datetime.now()
     
